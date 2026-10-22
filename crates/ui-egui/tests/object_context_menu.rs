@@ -10,6 +10,10 @@ use serde_json::json;
 type Harness = egui_kittest::Harness<'static, SheetApp>;
 
 fn fixture() -> (Harness, u32) {
+    fixture_with(Default::default())
+}
+
+fn fixture_with(services: gridcraft_ui_egui::Services) -> (Harness, u32) {
     let mut session = Session::new();
     session.new_workbook();
     session.execute("cell.set", json!({"cell": "A1", "input": "1"})).unwrap();
@@ -23,7 +27,7 @@ fn fixture() -> (Harness, u32) {
             app.logic(&ctx);
             app.ui(ui);
         },
-        SheetApp::new(session, Default::default()),
+        SheetApp::new(session, services),
     );
     h.run_steps(4);
     (h, id)
@@ -270,4 +274,49 @@ fn move_chart_to_its_own_sheet_changes_nothing() {
     h.run_steps(2);
     assert!(h.state().dialog.is_none());
     assert_eq!(chart_order(&h), vec![id, second], "the chart keeps its place in the stacking order");
+}
+
+#[test]
+fn save_as_picture_writes_the_chart_as_svg_where_the_picker_says() {
+    #[allow(clippy::disallowed_methods)] // a unique temp file name
+    let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+    let dir = std::env::temp_dir();
+    // The picker's name loses its extension: the picture is still an .svg.
+    let picked = dir.join(format!("gridcraft-picture-{}-{nonce}", std::process::id()));
+    let suggested = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let (seen, path) = (suggested.clone(), picked.to_string_lossy().into_owned());
+    let services = gridcraft_ui_egui::Services {
+        pick_save: Some(Box::new(move |name| {
+            *seen.borrow_mut() = name.to_string();
+            Some(path.clone())
+        })),
+        ..Default::default()
+    };
+    let (mut h, id) = fixture_with(services);
+    let at = inside_chart(&h, id, 0.5, 0.5);
+    click(&mut h, at, PointerButton::Secondary);
+    click_menu_item(&mut h, "Save as Picture…");
+    assert_eq!(*suggested.borrow(), format!("Chart {id}.svg"));
+    let file = picked.with_extension("svg");
+    let svg = std::fs::read_to_string(&file).unwrap();
+    assert!(svg.starts_with(r#"<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200""#), "{svg}");
+    assert!(h.state().message.is_none());
+    std::fs::remove_file(file).unwrap();
+}
+
+#[test]
+fn save_as_picture_downloads_the_svg_in_the_browser() {
+    let got = std::rc::Rc::new(std::cell::RefCell::new(None));
+    let sink = got.clone();
+    let services = gridcraft_ui_egui::Services {
+        download: Some(Box::new(move |name, bytes| *sink.borrow_mut() = Some((name.to_string(), bytes.to_vec())))),
+        ..Default::default()
+    };
+    let (mut h, id) = fixture_with(services);
+    let at = inside_chart(&h, id, 0.5, 0.5);
+    click(&mut h, at, PointerButton::Secondary);
+    click_menu_item(&mut h, "Save as Picture…");
+    let (name, bytes) = got.borrow_mut().take().expect("downloaded");
+    assert_eq!(name, format!("Chart {id}.svg"));
+    assert!(bytes.starts_with(b"<svg "));
 }

@@ -449,6 +449,7 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Moves it among objects of the same kind: shapes are drawn under pictures, pictures under charts." => {
             "Verschiebt es unter Objekten derselben Art: Formen liegen unter Bildern, Bilder unter Diagrammen."
         }
+        "Save as Picture…" => "Als Bild speichern…",
         "Insert Sheet" => "Blatt einfügen",
         "Rename" => "Umbenennen",
         "Move or Copy…" => "Verschieben oder kopieren…",

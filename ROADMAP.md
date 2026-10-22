@@ -2,7 +2,7 @@
 
 **Stage: alpha** · next: beta, ~25 points of "ready for real work" and ~160–240 h away
 
-> **Last reviewed:** 2026-10-11 · **Last updated:** 2026-10-21 · **Change:** minor (Move Chart dialog) · **Target:** Microsoft Excel (Microsoft 365)
+> **Last reviewed:** 2026-10-11 · **Last updated:** 2026-10-21 · **Change:** minor (chart Save as Picture as SVG) · **Target:** Microsoft Excel (Microsoft 365)
 
 GridCraft aims at full Microsoft Excel parity, and at being better in places: faster, open (XLSX
 is the native format), fully scriptable by agents (MCP, control channel, CLI), and on the web.
@@ -135,6 +135,7 @@ Ranked; estimates in Opus 5.5 agent-hours. Detail and the full beta-gate list in
 
 | Date | What landed |
 |---|---|
+| 2026-10-21 | Save as Picture on a chart's context menu writes the chart as SVG (`chart.saveAsPicture`) |
 | 2026-10-21 | Move Chart dialog from a chart's context menu: moves the chart to another worksheet |
 | 2026-10-21 | Change Chart Type dialog from a chart's context menu, previewing the chart in the type picked |
 | 2026-10-21 | Object context menu: Bring to Front ▸ and Send to Back ▸ submenus with Bring Forward and Send Backward |
@@ -223,6 +224,7 @@ Ranked; estimates in Opus 5.5 agent-hours. Detail and the full beta-gate list in
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-21 | minor | Progress log: chart Save as Picture |
 | 2026-10-21 | minor | Progress log: Move Chart dialog |
 | 2026-10-21 | minor | Progress log: Change Chart Type dialog |
 | 2026-10-21 | minor | Progress log: Bring to Front and Send to Back submenus |

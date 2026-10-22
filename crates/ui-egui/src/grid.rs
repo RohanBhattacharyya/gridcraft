@@ -3373,7 +3373,7 @@ fn object_menu(app: &mut SheetApp, ui: &mut egui::Ui) {
         items.extend([("-", ""), ("Bring to Front", "front"), ("Send to Back", "back")]);
     }
     if kind == "chart" {
-        items.extend([("-", ""), ("Format Chart Area…", "ui:formatChart")]);
+        items.extend([("-", ""), ("Save as Picture…", "ui:saveAsPicture"), ("Format Chart Area…", "ui:formatChart")]);
     }
     let lang = crate::i18n::current(ui.ctx());
     let mut open = true;
@@ -3426,6 +3426,7 @@ fn object_menu(app: &mut SheetApp, ui: &mut egui::Ui) {
         "ui:changeChartType" => app.open_dialog("changeChartType", json!({"chart": id})),
         "ui:selectData" => app.open_dialog("selectData", json!({"chart": id})),
         "ui:moveChart" => app.open_dialog("moveChart", json!({"chart": id})),
+        "ui:saveAsPicture" => app.save_chart_as_picture(id),
         "ui:formatChart" => app.grid.pane = Some("formatChart".into()),
         "toFront" => app.run_or_alert("arrange.bringForward", arrange(Some("toFront"))),
         "forward" => app.run_or_alert("arrange.bringForward", arrange(None)),

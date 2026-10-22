@@ -506,6 +506,7 @@ mod tests {
             "Bring Forward",
             "Send to Back",
             "Send Backward",
+            "Save as Picture…",
         ] {
             assert_ne!(Language::De.tr(label), label, "German context menu label missing: {label}");
         }

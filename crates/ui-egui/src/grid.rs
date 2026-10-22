@@ -3356,6 +3356,10 @@ fn fill_menu(app: &mut SheetApp, ui: &mut egui::Ui, was_open: bool) {
     }
 }
 
+/// Bring to Front and Send to Back reorder an object among objects of its own kind: shapes,
+/// pictures, charts and slicers are drawn in that order, each kind over the one before.
+const ARRANGE_TIP: &str = "Moves it among objects of the same kind: shapes are drawn under pictures, pictures under charts.";
+
 /// The right-click menu of a chart, picture, shape or slicer. Bring to Front and Send to Back are
 /// submenus that also hold Bring Forward and Send Backward, as in Excel.
 fn object_menu(app: &mut SheetApp, ui: &mut egui::Ui) {
@@ -3394,7 +3398,8 @@ fn object_menu(app: &mut SheetApp, ui: &mut egui::Ui) {
                 } else if !submenu.is_empty() {
                     egui::containers::menu::SubMenuButton::new(lang.tr(label)).ui(ui, |ui| {
                         for &(label, action) in submenu {
-                            if ui.button(lang.tr(label)).clicked() {
+                            // On the items: egui hides the tooltip of a button whose submenu is open.
+                            if ui.button(lang.tr(label)).on_hover_text(lang.tr(ARRANGE_TIP)).clicked() {
                                 chosen = Some(action);
                             }
                         }
@@ -3408,7 +3413,8 @@ fn object_menu(app: &mut SheetApp, ui: &mut egui::Ui) {
         app.grid.object_menu = None;
     }
     let Some(action) = chosen else { return };
-    // `toFront`/`toBack` move it all the way; without them it moves one step.
+    // `toFront`/`toBack` move it all the way; without them it moves one step. Each kind is its own
+    // stack (see `ARRANGE_TIP`): the order changes among charts, pictures or shapes only.
     let arrange = |extreme: Option<&str>| {
         let mut params = json!({"kind": kind, "id": id});
         if let Some(key) = extreme {

@@ -135,3 +135,27 @@ fn escape_closes_the_chart_menu() {
     h.run_steps(2);
     assert!(h.state().grid.object_menu.is_none());
 }
+
+#[test]
+fn the_arrange_items_say_they_reorder_within_the_objects_kind() {
+    let (mut h, id) = fixture();
+    h.ctx.all_styles_mut(|s| s.interaction.tooltip_delay = 0.0);
+    let tip = "Moves it among objects of the same kind: shapes are drawn under pictures, pictures under charts.";
+    for (submenu, item) in [("Bring to Front", "Bring Forward"), ("Send to Back", "Send Backward")] {
+        let at = inside_chart(&h, id, 0.5, 0.5);
+        click(&mut h, at, PointerButton::Secondary);
+        let (at, _, _) = h.state().grid.object_menu.expect("the chart's menu opened");
+        let button = h.get_all_by_label_contains(submenu).find(|n| n.rect().top() >= at.y && n.rect().left() >= at.x - 1.0).unwrap().rect();
+        h.input_mut().events.push(Event::PointerMoved(button.center()));
+        h.run_steps(3);
+        let target = h.get_all_by_role_and_label(Role::Button, item).next().expect("the submenu opened").rect();
+        // Along the button's row, then onto the item, as a pointer travels into a submenu.
+        h.input_mut().events.push(Event::PointerMoved(egui::pos2(target.left() + 4.0, button.center().y)));
+        h.run_steps(2);
+        h.input_mut().events.push(Event::PointerMoved(target.center()));
+        h.run_steps(6);
+        assert!(h.query_all_by_value(tip).next().is_some() || h.query_all_by_label(tip).next().is_some(), "{item} explains its kind-local order");
+        h.key_press(Key::Escape);
+        h.run_steps(2);
+    }
+}

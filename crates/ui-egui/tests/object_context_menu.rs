@@ -189,3 +189,20 @@ fn change_chart_type_from_the_menu_changes_the_right_clicked_chart() {
     h.state_mut().run("edit.undo", json!({})).unwrap();
     assert_eq!(kind(&h), gridcraft_engine::model::ChartKind::ColumnClustered, "one undo step");
 }
+
+#[test]
+fn change_chart_type_keeps_a_kind_the_list_does_not_have() {
+    let (mut h, id) = fixture();
+    h.state_mut().run("chart.changeType", json!({"chart": id, "type": "bubble"})).unwrap();
+    h.run_steps(2);
+    let at = inside_chart(&h, id, 0.5, 0.5);
+    click(&mut h, at, PointerButton::Secondary);
+    click_menu_item(&mut h, "Change Chart Type…");
+    let d = h.state().dialog.as_ref().expect("Change Chart Type opened");
+    assert!(d.values.get("type").is_none(), "no type is picked for a Bubble chart");
+    h.key_press(Key::Enter);
+    h.run_steps(2);
+    assert!(h.state().dialog.is_none(), "OK closes the dialog");
+    let kind = h.state().session.doc().unwrap().wb.active().unwrap().charts.iter().find(|c| c.id == id).unwrap().kind;
+    assert_eq!(kind, gridcraft_engine::model::ChartKind::Bubble, "OK without a pick keeps the chart's type");
+}

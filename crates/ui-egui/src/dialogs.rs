@@ -788,8 +788,12 @@ impl Dialog {
                 // Recommendations for the chart's own data; without them only All Charts shows.
                 d.result = source.and_then(|range| app.session.run("insert.chartRecommendations", json!({"range": range})).ok());
                 d.tab = "All Charts".into();
-                let current = ALL_CHARTS.iter().position(|(t, sub, _)| gridcraft_engine::cmd::insert::chart_kind(t, sub) == kind);
-                select_chart(&mut d, current.unwrap_or(0));
+                match ALL_CHARTS.iter().position(|(t, sub, _)| gridcraft_engine::cmd::insert::chart_kind(t, sub) == kind) {
+                    Some(current) => select_chart(&mut d, current),
+                    // A kind the list doesn't have (Bubble, Stock…): nothing is picked, so OK
+                    // keeps it instead of turning it into the first type listed.
+                    None => d.list_index = usize::MAX,
+                }
                 d
             }
             "selectData" => {
@@ -2509,7 +2513,9 @@ fn recommended_charts(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog, con
                 let id = d.values.get("chart").and_then(Json::as_u64);
                 doc.wb.sheet(sheet).and_then(|sh| sh.charts.iter().find(|c| Some(u64::from(c.id)) == id)).map(|c| {
                     let mut chart = c.clone();
-                    chart.kind = gridcraft_engine::cmd::insert::chart_kind(&text("type"), &text("subtype"));
+                    if d.values.contains_key("type") {
+                        chart.kind = gridcraft_engine::cmd::insert::chart_kind(&text("type"), &text("subtype"));
+                    }
                     (sheet, chart)
                 })
             } else {
@@ -2526,6 +2532,11 @@ fn recommended_charts(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog, con
         let params =
             json!({"type": d.values.get("type").cloned().unwrap_or(Json::Null), "subtype": d.values.get("subtype").cloned().unwrap_or(Json::Null)});
         if change {
+            // No type picked: the chart keeps its own.
+            if !d.values.contains_key("type") {
+                *open = false;
+                return;
+            }
             let params = json!({"chart": d.values.get("chart"), "type": params["type"], "subtype": params["subtype"]});
             match app.run("chart.changeType", params) {
                 Ok(_) => *open = false,

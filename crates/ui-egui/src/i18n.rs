@@ -500,6 +500,7 @@ mod tests {
             "Hide",
             "Unhide",
             "Group",
+            "Change Chart Type…",
             "Bring to Front",
             "Bring Forward",
             "Send to Back",

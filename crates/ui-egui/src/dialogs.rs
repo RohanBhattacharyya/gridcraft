@@ -772,6 +772,26 @@ impl Dialog {
                 select_chart(&mut d, 0);
                 d
             }
+            "changeChartType" => {
+                // Change Chart Type: the Insert Chart dialog's lists with the chart's own type
+                // picked; OK changes the type of that chart.
+                let id = p("chart").as_u64();
+                let found = app.session.active().and_then(|doc| {
+                    let ch = doc.wb.active()?.charts.iter().find(|c| Some(u64::from(c.id)) == id)?;
+                    Some((ch.kind, ch.source.clone()))
+                });
+                let Some((kind, source)) = found else {
+                    app.message = Some(("Change Chart Type".into(), "Select a chart first.".into()));
+                    return None;
+                };
+                let mut d = Dialog::custom("changeChartType", "Change Chart Type", json!({"chart": id}));
+                // Recommendations for the chart's own data; without them only All Charts shows.
+                d.result = source.and_then(|range| app.session.run("insert.chartRecommendations", json!({"range": range})).ok());
+                d.tab = "All Charts".into();
+                let current = ALL_CHARTS.iter().position(|(t, sub, _)| gridcraft_engine::cmd::insert::chart_kind(t, sub) == kind);
+                select_chart(&mut d, current.unwrap_or(0));
+                d
+            }
             "selectData" => {
                 // Chart Design › Select Data: data range, series to keep, category axis labels.
                 let id = p("chart").as_u64();
@@ -1149,7 +1169,7 @@ pub fn show(app: &mut SheetApp, ctx: &egui::Context) {
         "formatCells" => 560.0,
         "about" => 660.0,
         "insertFunction" | "commandSearch" | "nameManager" | "manageRules" | "journal" | "agents" | "macros" => 520.0,
-        "recommendedCharts" => 600.0,
+        "recommendedCharts" | "changeChartType" => 600.0,
         "analysisToolPak" => 420.0,
         "solver" => 460.0,
         "zoom" => 220.0,
@@ -1183,7 +1203,7 @@ pub fn show(app: &mut SheetApp, ctx: &egui::Context) {
                 "sort" => sort(app, ui, &mut d, &mut confirm),
                 "nameManager" => name_manager(app, ui, &mut d, &mut open),
                 "manageRules" => manage_rules(app, ui),
-                "recommendedCharts" => recommended_charts(app, ui, &mut d, &mut confirm, &mut open),
+                "recommendedCharts" | "changeChartType" => recommended_charts(app, ui, &mut d, &mut confirm, &mut open),
                 "selectData" => select_data(app, ui, &mut d, &mut confirm, &mut open),
                 "commandSearch" => command_search(app, ui, &mut d, &mut confirm),
                 "goalSeek" => goal_seek(app, ui, &mut d, &mut confirm),
@@ -2436,9 +2456,13 @@ fn chart_icon(t: &str) -> Icon {
     }
 }
 
+/// Insert Chart (OK inserts the chart picked) and Change Chart Type (OK changes the type of the
+/// chart in `values.chart`).
 fn recommended_charts(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog, confirm: &mut bool, open: &mut bool) {
+    let change = d.name == "changeChartType";
+    let tabs: &[&str] = if change && d.result.is_none() { &["All Charts"] } else { &["Recommended Charts", "All Charts"] };
     ui.horizontal(|ui| {
-        for tab in ["Recommended Charts", "All Charts"] {
+        for &tab in tabs {
             if ui.selectable_label(d.tab == tab, tab).clicked() && d.tab != tab {
                 d.tab = tab.to_string();
                 select_chart(d, 0);
@@ -2477,10 +2501,21 @@ fn recommended_charts(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog, con
             let (rect, _) = ui.allocate_exact_size(vec2(360.0, 216.0), Sense::hover());
             ui.painter().rect_filled(rect, 2.0, Color32::WHITE);
             ui.painter().rect_stroke(rect, 2.0, Stroke::new(1.0, t.separator), StrokeKind::Inside);
-            let params = json!({"type": d.values.get("type").cloned().unwrap_or(Json::Null), "subtype": d.values.get("subtype").cloned().unwrap_or(Json::Null)});
-            if let Some(doc) = app.session.active()
-                && let Ok((sheet, chart)) = gridcraft_engine::cmd::insert::build_chart(&app.session, &params)
-            {
+            let text = |k: &str| d.values.get(k).and_then(Json::as_str).unwrap_or("").to_string();
+            let Some(doc) = app.session.active() else { return };
+            let preview = if change {
+                // The chart itself, drawn as the type picked.
+                let sheet = doc.wb.active_sheet;
+                let id = d.values.get("chart").and_then(Json::as_u64);
+                doc.wb.sheet(sheet).and_then(|sh| sh.charts.iter().find(|c| Some(u64::from(c.id)) == id)).map(|c| {
+                    let mut chart = c.clone();
+                    chart.kind = gridcraft_engine::cmd::insert::chart_kind(&text("type"), &text("subtype"));
+                    (sheet, chart)
+                })
+            } else {
+                gridcraft_engine::cmd::insert::build_chart(&app.session, &json!({"type": text("type"), "subtype": text("subtype")})).ok()
+            };
+            if let Some((sheet, chart)) = preview {
                 crate::chartview::paint_chart(ui.painter(), rect, &doc.wb, sheet, &chart);
             }
         });
@@ -2490,6 +2525,14 @@ fn recommended_charts(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog, con
         *confirm = false;
         let params =
             json!({"type": d.values.get("type").cloned().unwrap_or(Json::Null), "subtype": d.values.get("subtype").cloned().unwrap_or(Json::Null)});
+        if change {
+            let params = json!({"chart": d.values.get("chart"), "type": params["type"], "subtype": params["subtype"]});
+            match app.run("chart.changeType", params) {
+                Ok(_) => *open = false,
+                Err(e) => app.message = Some((d.title.clone(), crate::clean_error(&e))),
+            }
+            return;
+        }
         match app.run("insert.chart", params) {
             Ok(r) => {
                 // The new chart is selected, as after inserting any object.

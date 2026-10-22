@@ -52,6 +52,14 @@ fn click(h: &mut Harness, pos: egui::Pos2, button: PointerButton) {
     }
 }
 
+/// Clicks the object menu's item, not a ribbon button with the same label.
+fn click_menu_item(h: &mut Harness, label: &str) {
+    let (at, _, _) = h.state().grid.object_menu.expect("the object menu is open");
+    let item = h.get_all_by_role_and_label(Role::Button, label).find(|n| n.rect().top() >= at.y && n.rect().left() >= at.x - 1.0).unwrap();
+    item.click();
+    h.run_steps(3);
+}
+
 /// Hovers the object menu's `submenu` item, then clicks `item` in the submenu that opens beside it.
 fn click_submenu_item(h: &mut Harness, submenu: &str, item: &str) {
     let (at, _, _) = h.state().grid.object_menu.expect("the object menu is open");
@@ -158,4 +166,26 @@ fn the_arrange_items_say_they_reorder_within_the_objects_kind() {
         h.key_press(Key::Escape);
         h.run_steps(2);
     }
+}
+
+#[test]
+fn change_chart_type_from_the_menu_changes_the_right_clicked_chart() {
+    let (mut h, id) = fixture();
+    let at = inside_chart(&h, id, 0.5, 0.5);
+    click(&mut h, at, PointerButton::Secondary);
+    click_menu_item(&mut h, "Change Chart Type…");
+    let d = h.state().dialog.as_ref().expect("Change Chart Type opened");
+    assert_eq!((d.name(), d.title.as_str()), ("changeChartType", "Change Chart Type"));
+    assert_eq!((d.tab.as_str(), d.values["type"].as_str()), ("All Charts", Some("column")), "opens on the chart's own type");
+
+    h.get_by_label("Line with Markers").click();
+    h.run_steps(2);
+    h.key_press(Key::Enter);
+    h.run_steps(2);
+    assert!(h.state().dialog.is_none());
+    let kind = |h: &Harness| h.state().session.doc().unwrap().wb.active().unwrap().charts.iter().find(|c| c.id == id).unwrap().kind;
+    assert_eq!(kind(&h), gridcraft_engine::model::ChartKind::LineMarkers);
+    assert_eq!(h.state().session.doc().unwrap().wb.active().unwrap().charts.len(), 1, "no chart is inserted");
+    h.state_mut().run("edit.undo", json!({})).unwrap();
+    assert_eq!(kind(&h), gridcraft_engine::model::ChartKind::ColumnClustered, "one undo step");
 }

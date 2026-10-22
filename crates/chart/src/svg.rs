@@ -68,7 +68,7 @@ pub fn to_svg(prims: &[Prim], w: f32, h: f32) -> String {
                 let weight = if *bold { r#" font-weight="bold""# } else { "" };
                 writeln!(
                     out,
-                    r#"<text transform="translate({} {}){rotate}" y="{}" font-family="{FONT}" font-size="{}"{weight} text-anchor="{anchor}"{}>{}</text>"#,
+                    r#"<text xml:space="preserve" transform="translate({} {}){rotate}" y="{}" font-family="{FONT}" font-size="{}"{weight} text-anchor="{anchor}"{}>{}</text>"#,
                     num(*x),
                     num(*y),
                     num(dy),

@@ -1249,9 +1249,23 @@ fn svg_escapes_text_and_places_it_like_the_pdf_export() {
     };
     let svg = to_svg(&[text(0.0), text(-std::f32::consts::FRAC_PI_2)], 100.0, 50.0);
     assert!(svg.contains(
-        r##"<text transform="translate(10 20)" y="7.8" font-family="Helvetica, Arial, sans-serif" font-size="10" font-weight="bold" text-anchor="middle" fill="#404040">Q1 &amp; &lt;Q2&gt; &quot;East&quot;</text>"##
+        r##"<text xml:space="preserve" transform="translate(10 20)" y="7.8" font-family="Helvetica, Arial, sans-serif" font-size="10" font-weight="bold" text-anchor="middle" fill="#404040">Q1 &amp; &lt;Q2&gt; &quot;East&quot;</text>"##
     ));
     assert!(svg.contains(r#"transform="translate(10 20) rotate(-90)""#));
+    // Repeated and leading spaces in a label are kept, not collapsed by the SVG reader.
+    let spaced = Prim::Text {
+        x: 0.0,
+        y: 0.0,
+        text: "  Q1   total".into(),
+        size: 10.0,
+        color: [0, 0, 0, 255],
+        bold: false,
+        align: HAlign::Left,
+        valign: VAlign::Top,
+        rotation: 0.0,
+    };
+    let svg = to_svg(&[spaced], 10.0, 10.0);
+    assert!(svg.contains(r#"<text xml:space="preserve" "#) && svg.contains(">  Q1   total</text>"), "{svg}");
 }
 
 #[test]

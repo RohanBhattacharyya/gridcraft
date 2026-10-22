@@ -237,6 +237,27 @@ fn move_chart_from_the_menu_moves_it_to_another_sheet() {
 }
 
 #[test]
+fn move_chart_moves_it_even_if_the_destination_became_the_active_sheet() {
+    let (mut h, id) = fixture();
+    h.state_mut().run("home.insertSheet", json!({})).unwrap();
+    h.state_mut().run("sheet.activate", json!({"sheet": 0})).unwrap();
+    h.run_steps(2);
+    let at = inside_chart(&h, id, 0.5, 0.5);
+    click(&mut h, at, PointerButton::Secondary);
+    click_menu_item(&mut h, "Move Chart…");
+    // Object in: Sheet2, and Sheet2 becomes the active sheet before OK (an agent's command).
+    h.state_mut().dialog.as_mut().unwrap().values.insert("sheet".into(), json!("Sheet2"));
+    h.state_mut().run("sheet.activate", json!({"sheet": 1})).unwrap();
+    h.run_steps(2);
+    h.key_press(Key::Enter);
+    h.run_steps(2);
+    let wb = &h.state().session.doc().unwrap().wb;
+    assert!(wb.sheets[0].charts.is_empty(), "the chart left Sheet1");
+    assert_eq!(wb.sheets[1].charts.iter().map(|c| c.id).collect::<Vec<_>>(), [id]);
+    assert_eq!(wb.active_sheet, 1);
+}
+
+#[test]
 fn move_chart_to_its_own_sheet_changes_nothing() {
     let (mut h, id) = fixture();
     let r = h.state_mut().run("insert.chart", json!({"type": "line", "at": "L3", "width": 200, "height": 150})).unwrap();

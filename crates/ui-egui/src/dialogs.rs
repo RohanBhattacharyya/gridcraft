@@ -807,7 +807,8 @@ impl Dialog {
                     app.message = Some(("Move Chart".into(), "Select a chart first.".into()));
                     return None;
                 };
-                Dialog::custom("moveChart", "Move Chart", json!({"chart": id, "sheet": sheet}))
+                // `from` is the chart's sheet; `sheet` is the destination picked.
+                Dialog::custom("moveChart", "Move Chart", json!({"chart": id, "from": sheet, "sheet": sheet}))
             }
             "selectData" => {
                 // Chart Design › Select Data: data range, series to keep, category axis labels.
@@ -2601,9 +2602,15 @@ fn move_chart(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog, confirm: &m
     }
     *confirm = false;
     let id = d.values.get("chart").and_then(Json::as_u64);
-    let here = app.session.active().and_then(|doc| doc.wb.active().map(|s| s.name.clone()));
+    let from = d.values.get("from").and_then(Json::as_str).unwrap_or("").to_string();
     // Moving to its own sheet leaves it where it is.
-    if here.as_deref() != Some(target.as_str()) {
+    if from != target {
+        // `chart.move` finds the chart on the active sheet: go back to the chart's sheet if the
+        // active one changed while the dialog was open.
+        let here = app.session.active().and_then(|doc| doc.wb.active().map(|s| s.name.clone()));
+        if here.as_deref() != Some(from.as_str()) {
+            let _ = app.run("sheet.activate", json!({"sheet": from}));
+        }
         if let Err(e) = app.run("chart.move", json!({"chart": id, "sheet": target})) {
             app.message = Some((d.title.clone(), crate::clean_error(&e)));
             return;

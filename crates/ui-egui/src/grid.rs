@@ -3366,7 +3366,7 @@ fn object_menu(app: &mut SheetApp, ui: &mut egui::Ui) {
     let Some((at, kind, id)) = app.grid.object_menu else { return };
     let mut items = vec![("Delete", "object.delete")];
     if kind == "chart" {
-        items.extend([("-", ""), ("Change Chart Type…", "ui:changeChartType"), ("Select Data…", "ui:selectData")]);
+        items.extend([("-", ""), ("Change Chart Type…", "ui:changeChartType"), ("Select Data…", "ui:selectData"), ("Move Chart…", "ui:moveChart")]);
     }
     // Slicers aren't in the stacking order `arrange.*` changes.
     if kind != "slicer" {
@@ -3425,6 +3425,7 @@ fn object_menu(app: &mut SheetApp, ui: &mut egui::Ui) {
     match action {
         "ui:changeChartType" => app.open_dialog("changeChartType", json!({"chart": id})),
         "ui:selectData" => app.open_dialog("selectData", json!({"chart": id})),
+        "ui:moveChart" => app.open_dialog("moveChart", json!({"chart": id})),
         "ui:formatChart" => app.grid.pane = Some("formatChart".into()),
         "toFront" => app.run_or_alert("arrange.bringForward", arrange(Some("toFront"))),
         "forward" => app.run_or_alert("arrange.bringForward", arrange(None)),

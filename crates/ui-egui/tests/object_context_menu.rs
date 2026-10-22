@@ -206,3 +206,47 @@ fn change_chart_type_keeps_a_kind_the_list_does_not_have() {
     let kind = h.state().session.doc().unwrap().wb.active().unwrap().charts.iter().find(|c| c.id == id).unwrap().kind;
     assert_eq!(kind, gridcraft_engine::model::ChartKind::Bubble, "OK without a pick keeps the chart's type");
 }
+
+#[test]
+fn move_chart_from_the_menu_moves_it_to_another_sheet() {
+    let (mut h, id) = fixture();
+    h.state_mut().run("home.insertSheet", json!({})).unwrap();
+    h.state_mut().run("sheet.activate", json!({"sheet": 0})).unwrap();
+    h.run_steps(2);
+    let at = inside_chart(&h, id, 0.5, 0.5);
+    click(&mut h, at, PointerButton::Secondary);
+    click_menu_item(&mut h, "Move Chart…");
+    let d = h.state().dialog.as_ref().expect("Move Chart opened");
+    assert_eq!((d.name(), d.values["sheet"].as_str()), ("moveChart", Some("Sheet1")), "Object in starts on the chart's sheet");
+
+    // Object in: Sheet2.
+    let combo = h.get_by_role(Role::ComboBox).rect();
+    h.get_by_role(Role::ComboBox).click();
+    h.run_steps(2);
+    // The list item under the combo box, not the sheet tab.
+    h.get_all_by_label("Sheet2").find(|n| n.rect().top() > combo.top() && n.rect().top() < combo.bottom() + 100.0).unwrap().click();
+    h.run_steps(2);
+    h.key_press(Key::Enter);
+    h.run_steps(2);
+    assert!(h.state().dialog.is_none());
+    let wb = &h.state().session.doc().unwrap().wb;
+    assert!(wb.sheets[0].charts.is_empty());
+    assert_eq!(wb.sheets[1].charts.iter().map(|c| c.id).collect::<Vec<_>>(), [id]);
+    assert_eq!(wb.active_sheet, 1, "goes to the chart's new sheet");
+    assert_eq!(h.state().selected_chart, Some(id), "with the chart selected");
+}
+
+#[test]
+fn move_chart_to_its_own_sheet_changes_nothing() {
+    let (mut h, id) = fixture();
+    let r = h.state_mut().run("insert.chart", json!({"type": "line", "at": "L3", "width": 200, "height": 150})).unwrap();
+    let second = r["chart"].as_u64().unwrap() as u32;
+    h.run_steps(2);
+    let at = inside_chart(&h, id, 0.5, 0.5);
+    click(&mut h, at, PointerButton::Secondary);
+    click_menu_item(&mut h, "Move Chart…");
+    h.key_press(Key::Enter);
+    h.run_steps(2);
+    assert!(h.state().dialog.is_none());
+    assert_eq!(chart_order(&h), vec![id, second], "the chart keeps its place in the stacking order");
+}

@@ -436,6 +436,12 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         // grid.rs chart, picture and shape context menu.
         "Change Chart Type…" => "Diagrammtyp ändern…",
         "Change Chart Type" => "Diagrammtyp ändern",
+        "Move Chart…" => "Diagramm verschieben…",
+        "Move Chart" => "Diagramm verschieben",
+        "Choose where you want the chart to be placed:" => "Wählen Sie, wo das Diagramm platziert werden soll:",
+        "New sheet:" => "Neues Blatt:",
+        "Object in:" => "Objekt in:",
+        "Chart sheets aren't supported yet." => "Diagrammblätter werden noch nicht unterstützt.",
         "Bring to Front" => "In den Vordergrund",
         "Bring Forward" => "Eine Ebene nach vorne",
         "Send to Back" => "In den Hintergrund",

@@ -433,6 +433,11 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Link…" => "Link…",
         "Hide" => "Ausblenden",
         "Unhide" => "Einblenden",
+        // grid.rs chart, picture and shape context menu.
+        "Bring to Front" => "In den Vordergrund",
+        "Bring Forward" => "Eine Ebene nach vorne",
+        "Send to Back" => "In den Hintergrund",
+        "Send Backward" => "Eine Ebene nach hinten",
         "Insert Sheet" => "Blatt einfügen",
         "Rename" => "Umbenennen",
         "Move or Copy…" => "Verschieben oder kopieren…",
